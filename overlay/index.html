@@ -2,25 +2,14 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title> kagerou overlay </title>
+    <title>燕云 Logs · Kagerou 观测统计</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Lato">
     <link rel="stylesheet" href="css/reset.css" />
     <link rel="stylesheet" href="../share/css/job-icons.css?v=6" />
-    <script>
-try {
-  var __test = new Function('a', "'use strict'; const b=(_=>`${_}`)(a); return b")(1)
-  if(__test !== '1') {
-    throw new SyntaxError
-  }
-} catch(e) {
-  if(location.hash.substring(1).split(',').indexOf('ignore-feature-test') === -1) {
-    location.href = '../outdated'
-  }
-}
-    </script>
+
     <script src="../share/lib/util.js?v="></script>
     <script src="../share/lib/config.js?v=audite-nostalgia"></script>
+    <script src="../share/lib/yanyun.js"></script>
     <script src="../share/lib/ws-abstract.js?v=audite-nostalgia"></script>
     <script src="../share/lib/locale.js?v=audite-nostalgia"></script>
     <script src="lib/render.js?v=audite-nostalgia"></script>
@@ -42,6 +31,7 @@ if(window.layer
 window.config = new Config()
 
 config.load()
+if(window.YANYUN_MODE) applyYanyunConfig()
 config.migrate()
 config.setResizeFactor()
 config.attachOverlayStyle('overlay')
@@ -51,6 +41,7 @@ window.hist = new History()
 window.addEventListener('load', e => {
   // locale
   window.l = new Locale(window.config.get('lang'), e => {
+    if(window.YANYUN_MODE) localizeYanyun(window.l)
     window.l.localizeAll()
     window.renderer = new Renderer(window.config.get())
     window.renderer.updateHeader()
@@ -71,6 +62,7 @@ window.addEventListener('load', e => {
         window.renderer.update()
       }
     })
+    if(window.YANYUN_MODE) startYanyunFeed()
     // layer.on('status')
     // layer.emit('restyle')
   })

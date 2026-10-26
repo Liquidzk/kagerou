@@ -95,7 +95,12 @@
     sort(key, target) {
       let d = (('+-'.indexOf(key[0]))+1 || 1) * 2 - 3
       let k = SORTABLE[key.substr('+-'.indexOf(key[0]) >= 0)]
-      ;(target || this.data).sort((a, b) => (pFloat(a[k]) - pFloat(b[k])) * d)
+      ;(target || this.data).sort((a, b) => {
+        const av = pFloat(a[k]), bv = pFloat(b[k])
+        if(!Number.isFinite(av)) return Number.isFinite(bv) ? 1 : 0
+        if(!Number.isFinite(bv)) return -1
+        return (av - bv) * d
+      })
 
       if(target) return target
     }
@@ -129,7 +134,7 @@
     }
 
     push(data) {
-      if(!data || !data.Encounter || data.Encounter.hits < 1) return
+      if(!data || !data.Encounter || (!data.yanyunObserved && data.Encounter.hits < 1)) return
 
       if(this.isNewEncounter(data.Encounter)) {
         if(config.get('format.myname').length === 0
@@ -160,6 +165,7 @@
 
     updateLastEncounter(encounter) {
       this.lastEncounter = {
+        yanyunReportKey: encounter.yanyunReportKey,
         hits: encounter.hits,
         region: encounter.CurrentZoneName,
         damage: encounter.damage,
@@ -171,6 +177,7 @@
       let really = (
         !this.lastEncounter
       || this.lastEncounter.region !== encounter.CurrentZoneName
+        || this.lastEncounter.yanyunReportKey !== encounter.yanyunReportKey
       || this.lastEncounter.duration > parseInt(encounter.DURATION)
       // ACT-side bug (scrambling data) making this invalid!
       // || this.lastEncounter.damage > encounter.damage

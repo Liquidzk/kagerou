@@ -153,6 +153,7 @@ const pInt = function parseLocaledInteger(string) {
 const ABBREVIATION_SUFFIXES = ['', 'k', 'M', 'G', 'T']
 
 const formatDps = function formatDPSNumberWithSmalls(number, opt, type, forceInt) {
+  if(number == null || !Number.isFinite(Number(number))) return '—'
   const significant_digit = (opt || {}).significant_digit || {}
   const abbr = (opt || {}).number_abbreviation || false
   const sep = (opt || {}).thousands_separator || ''

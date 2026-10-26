@@ -244,7 +244,9 @@
         }
       }
 
-      el.innerHTML = text
+      if(data && window.YANYUN_MODE && (text == null || text === '---')) text = '—'
+      if(c === 'i.name' || c === 'i.owner') el.textContent = text
+      else el.innerHTML = text
       el.className = classes
       if(locale) el.setAttribute('data-locale', locale)
 
@@ -266,7 +268,14 @@
         el.classList.add('class-' + (cls || 'unknown'))
         el.classList.toggle('me', isYou(data.name, this.owners))
 
-        let width = this._value(gaugeBy, data) / max[this.tab.sort] * 100
+        let rawWidth = this._value(gaugeBy, data) / max[this.tab.sort] * 100
+        let width = Number.isFinite(rawWidth) ? Math.max(0, Math.min(100, rawWidth)) : 0
+        if(data.yanyunActorId) {
+          el.tabIndex = 0
+          el.setAttribute('aria-label', '复盘 ' + data.name)
+          el.addEventListener('click', () => window.yanyunDesktop?.selectActor(data.yanyunActorId))
+          el.addEventListener('keydown', e => { if(e.key === 'Enter') window.yanyunDesktop?.selectActor(data.yanyunActorId) })
+        }
         el.innerHTML = `<span class="gauge" style="width:${width}%"></span>`
       } else {
         el.id = 'header'
