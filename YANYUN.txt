@@ -1,0 +1,16 @@
+燕云 Logs 悬浮界面
+=================
+
+本分支用于 LQ-yysls-logs 独立桌面客户端，保持 GPL-3.0-or-later 许可与原始 Kagerou 来源说明。
+新版入口：yanyun/index.html。
+
+yanyun/model.js：累计统计与 CLv2 复盘模型；未知值与 0 分开；非实时数据不宣称实时。
+yanyun/overlay.js：本机数据更新、角色排序和显示设置。
+yanyun/overlay.css：燕云专用布局、透明度和字体。
+
+窗口由主仓库 Electron 层提供置顶、拖动、鼠标穿透、显示隐藏与生命周期控制。
+新入口不使用 ACT WebSocket、FF14 职业、宠物、暴击/直击或旧配置页。
+旧源码保留用于上游追溯；主仓库打包时只复制 yanyun/、COPYING 和 LICENSE.md。
+
+主仓库：https://github.com/Liquidzk/LQ-yysls-logs
+在主仓库 npm test 可验证悬浮窗模型。
