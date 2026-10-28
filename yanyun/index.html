@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>燕云 Logs · 实时统计</title><link rel="stylesheet" href="overlay.css"></head><body>
 <div class="surface"><header><span class="brand">燕云 <b>LOGS</b></span><span id="title">等待绑定游戏</span><div class="controls"><button id="review" title="打开战斗复盘">↗</button><button id="settings" title="外观设置">⚙</button><button id="lock" title="鼠标穿透 · Ctrl+Shift+F8">◇</button><button id="hide" title="隐藏 · Ctrl+Shift+F9">−</button></div></header>
-<div class="status"><span id="dot"></span><b id="status">未绑定</b><span id="time">—</span></div>
+<div class="status"><span id="dot"></span><b id="status">未绑定</b><div id="battle-timer"><span id="timer-label">等待开战</span><span id="time">—</span></div></div>
 <nav><button class="active" data-tab="damage">输出</button><button data-tab="healed">治疗</button><button data-tab="taken">承伤</button><span id="count"></span></nav>
 <section id="preferences" hidden><label>背景透明度 <input id="opacity" type="range" min="25" max="100" value="92"></label><label>文字大小 <input id="font" type="range" min="11" max="21" value="14"></label><button id="reset">恢复默认</button></section>
 <div class="table"><div class="table-head"><span>角色</span><span id="total-label">累计输出</span><span id="rate-label">每秒输出</span></div><ol id="rows"></ol><p id="empty">在主窗口选择游戏进程并开始采集。<br>本地日志复盘也可单独打开统计窗。</p></div><footer id="notice">记录本机收到的数据，不补造缺失事件。</footer></div>

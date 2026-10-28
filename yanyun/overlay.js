@@ -2,6 +2,7 @@
 const model = window.YanyunModel, $ = id => document.getElementById(id), desktop = window.yanyunDesktop
 let source = 'live', tab = 'damage', value = null, busy = false, locked = false
 let names = {}
+let lastLiveData = null, pollFailed = false
 fetch('/api/names').then(r => r.json()).then(v => { names = v }).catch(() => {})
 const history = new model.History()
 let preferences
@@ -18,7 +19,7 @@ $('settings').onclick = () => { $('preferences').hidden = !$('preferences').hidd
 $('lock').onclick = () => desktop?.overlayCommand('lock')
 $('hide').onclick = () => desktop?.overlayCommand('hide')
 $('review').onclick = () => desktop?.overlayCommand('review')
-function state(s) { source = s.source || 'live'; locked = !!s.locked; $('lock').textContent = locked ? '◆' : '◇'; poll() }
+function state(s) { source = s.source || 'live'; lastLiveData = null; locked = !!s.locked; $('lock').textContent = locked ? '◆' : '◇'; poll() }
 desktop?.overlayState().then(state)
 desktop?.onOverlayState(state)
 desktop?.onOverlaySettings(() => { $('preferences').hidden = false })
@@ -26,7 +27,7 @@ document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () 
 function render() {
   if (!value) return
   $('title').textContent = value.title; $('status').textContent = value.status + (locked ? ' · 鼠标穿透' : '')
-  $('time').textContent = model.finite(value.duration) ? Math.floor(value.duration / 60).toString().padStart(2, '0') + ':' + Math.floor(value.duration % 60).toString().padStart(2, '0') : '—'
+  renderTime(value)
   $('dot').classList.toggle('active', value.fresh); $('notice').textContent = value.note
   $('total-label').textContent = { damage: '累计输出', healed: '累计治疗', taken: '累计承伤字段' }[tab]
   $('rate-label').textContent = tab === 'damage' ? source === 'review' ? '观测每秒' : '每秒输出' : tab === 'healed' ? '每秒治疗' : ''
@@ -42,6 +43,12 @@ function render() {
   }
   $('rows').replaceChildren(fragment); $('empty').hidden = rows.length > 0; $('count').textContent = rows.length ? rows.length + ' 位已观测角色' : ''
 }
+function renderTime(view) {
+  $('time').textContent = model.formatTime(view.duration)
+  $('timer-label').textContent = view.timer?.label || '复盘时长'
+  $('battle-timer').dataset.state = view.timer?.state || 'review'
+  $('battle-timer').title = view.timer?.detail || ''
+}
 async function poll() {
   if (busy) return
   busy = true
@@ -51,11 +58,16 @@ async function poll() {
     if (!response.ok) throw Error('offline')
     const data = await response.json()
     if (requested !== source) return
+    pollFailed = false; lastLiveData = requested === 'live' ? data : null
     value = requested === 'live' ? model.live(data, data.control?.running) : model.review(data)
     if (requested === 'live' && names.npcs?.[String(data.latest?.npcNo)]) value.title = names.npcs[String(data.latest.npcNo)]
     if (requested === 'review' && data.waiting) value.status = '请在 CLv2 复盘中选择战斗'
     history.push(value); render()
-  } catch { $('status').textContent = '连接中断 · 保留末次记录'; $('dot').classList.remove('active') }
+  } catch { pollFailed = true; $('status').textContent = '连接中断 · 保留末次记录'; $('dot').classList.remove('active') }
   finally { busy = false }
 }
 poll(); setInterval(poll, 1000)
+// Smooth local display; this does not increase requests to the game or engine.
+setInterval(() => {
+  if (source === 'live' && lastLiveData) renderTime(model.live(lastLiveData, !pollFailed && lastLiveData.control?.running))
+}, 100)
