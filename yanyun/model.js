@@ -42,6 +42,19 @@
       return bv - av
     })
   }
+  function bossView(s, running, now) {
+    const pulse = Date.parse(s.lastPacketObservedAt), h = s.health || {}
+    const live = s.source?.mode !== 'replay' && !!running && h.session === 'valid' && !h.gap &&
+      !['invalid', 'stopped'].includes(h.status) && now >= pulse && now - pulse < 3500
+    const rows = (s.bossHealth?.rows || []).map(r => {
+      const valid = r.available && finite(r.currentHp) && r.currentHp >= 0 && finite(r.maxHp) && r.maxHp > 0
+      return { ...r, available: !!valid, percent: valid ? Math.max(0, Math.min(100, r.currentHp / r.maxHp * 100)) : null }
+    })
+    const body = rows.find(r => r.group === 'choulingke' && r.role === 'body' && r.available)
+    const soul = rows.find(r => r.group === 'choulingke' && r.role === 'soul' && r.available)
+    return { rows, live, label: live ? 'Boss 实时血量' : s.source?.mode === 'replay' ? 'Boss 记录血量' : 'Boss 血量 · 已暂停',
+      difference: body && soul ? Math.abs(body.percent - soul.percent) : null }
+  }
   function live(data, running, now = Date.now()) {
     const s = data.latest || {}, h = s.health || {}, observed = Date.parse(s.observedAt)
     const recorded = s.source?.mode === 'replay'
@@ -57,7 +70,7 @@
       name: a.name || '玩家 · ' + a.idHash.slice(-6), damage: a.damage, healed: a.heal, taken: a.absorbDmg,
       dps: duration > 0 && finite(a.damage) ? a.damage / duration : null,
       hps: duration > 0 && finite(a.heal) ? a.heal / duration : null }))
-    return { rows, duration, timer: timer || { label: duration === null ? '等待开战' : s.timeCostSeconds > 0 ? '服务器时长' : '战斗计时', state: 'legacy' },
+    return { rows, duration, bossHealth: bossView(s, running, now), timer: timer || { label: duration === null ? '等待开战' : s.timeCostSeconds > 0 ? '服务器时长' : '战斗计时', state: 'legacy' },
       key: s.battleTimer?.key || (s.source?.sessionId || '') + (clock?.startObservedAt ? ':' + clock.startObservedAt : ''), title: s.npcNo ? '战斗目标 ' + s.npcNo : '等待战斗统计',
       status: recorded ? '离线回放 · 非实时采集' : !running ? '采集未运行 · 保留末次记录' : fresh ? '实时观测' : h.gap || h.status === 'invalid' ? '采集有缺口 · 数据已冻结' : '等待服务器更新',
       fresh, note: '服务器累计统计；完整队友动作与 Buff 覆盖尚未验证。承伤沿用服务器字段。' }
@@ -72,7 +85,7 @@
     constructor() { this.current = null; this.entries = new Map() }
     push(value) { if (this.current?.key && this.current.key !== value.key) this.entries.set(this.current.key, this.current); this.current = value; if (this.entries.size > 50) this.entries.delete(this.entries.keys().next().value) }
   }
-  const api = { finite, number, formatTime, ranked, live, review, History }
+  const api = { finite, number, formatTime, ranked, live, review, History, bossView }
   if (typeof module !== 'undefined') module.exports = api
   else root.YanyunModel = api
 })(typeof window === 'undefined' ? globalThis : window)

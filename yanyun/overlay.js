@@ -28,6 +28,7 @@ function render() {
   if (!value) return
   $('title').textContent = value.title; $('status').textContent = value.status + (locked ? ' · 鼠标穿透' : '')
   renderTime(value)
+  renderBoss(value)
   $('dot').classList.toggle('active', value.fresh); $('notice').textContent = value.note
   $('total-label').textContent = { damage: '累计输出', healed: '累计治疗', taken: '累计承伤字段' }[tab]
   $('rate-label').textContent = tab === 'damage' ? source === 'review' ? '观测每秒' : '每秒输出' : tab === 'healed' ? '每秒治疗' : ''
@@ -49,6 +50,31 @@ function renderTime(view) {
   $('battle-timer').dataset.state = view.timer?.state || 'review'
   $('battle-timer').title = view.timer?.detail || ''
 }
+function bossName(row) {
+  return row.group === 'choulingke' ? '愁铃客 · ' + (row.role === 'body' ? '肉体' : '灵魂') : names.npcs?.[String(row.npcTemplateNo)] || 'Boss · ' + row.npcTemplateNo
+}
+function renderBoss(view) {
+  const hp = view.bossHealth, rows = hp?.rows || []
+  $('boss-health').hidden = !rows.length
+  $('boss-health').classList.toggle('paused', !hp?.live)
+  $('boss-label').textContent = hp?.label || ''
+  $('boss-difference').textContent = model.finite(hp?.difference) ? '双条差 ' + hp.difference.toFixed(1) + '%' : ''
+  const fragment = document.createDocumentFragment()
+  for (const row of rows) {
+    const bar = document.createElement('div'), fill = document.createElement('div'), name = document.createElement('span'), number = document.createElement('span')
+    bar.className = 'boss-bar'; bar.dataset.role = row.role || 'boss'; bar.dataset.available = row.available
+    fill.className = 'boss-fill'; fill.style.width = (row.percent ?? 0) + '%'
+    name.className = 'boss-name'; name.textContent = bossName(row)
+    number.className = 'boss-number'; number.textContent = row.available ? row.percent.toFixed(1) + '%' : '等待血量快照'
+    bar.title = row.available ? name.textContent + '：' + model.number(row.currentHp) + ' / ' + model.number(row.maxHp) + (hp.live ? '' : '（末次记录）') : name.textContent + '：尚未收到完整血量，不视为满血或零血'
+    const amount = document.createElement('span'); amount.className = 'boss-amount'
+    amount.textContent = row.available ? model.number(row.currentHp) + ' / ' + model.number(row.maxHp) : '—'
+    bar.setAttribute('role', 'meter'); bar.setAttribute('aria-label', name.textContent); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100')
+    if (row.available) bar.setAttribute('aria-valuenow', row.percent.toFixed(3))
+    bar.append(fill, name, amount, number); fragment.append(bar)
+  }
+  $('boss-bars').replaceChildren(fragment)
+}
 async function poll() {
   if (busy) return
   busy = true
@@ -60,7 +86,7 @@ async function poll() {
     if (requested !== source) return
     pollFailed = false; lastLiveData = requested === 'live' ? data : null
     value = requested === 'live' ? model.live(data, data.control?.running) : model.review(data)
-    if (requested === 'live' && names.npcs?.[String(data.latest?.npcNo)]) value.title = names.npcs[String(data.latest.npcNo)]
+    if (requested === 'live' && value.bossHealth.rows.length) value.title = [...new Set(value.bossHealth.rows.map(bossName))].join(' / ')
     if (requested === 'review' && data.waiting) value.status = '请在 CLv2 复盘中选择战斗'
     history.push(value); render()
   } catch { pollFailed = true; $('status').textContent = '连接中断 · 保留末次记录'; $('dot').classList.remove('active') }
@@ -70,5 +96,9 @@ async function poll() {
 poll(); setInterval(poll, 250)
 // Smooth local display; this does not increase requests to the game or engine.
 setInterval(() => {
-  if (source === 'live' && lastLiveData) renderTime(model.live(lastLiveData, !pollFailed && lastLiveData.control?.running))
+  if (source === 'live' && lastLiveData) {
+    const current = model.live(lastLiveData, !pollFailed && lastLiveData.control?.running)
+    renderTime(current)
+    if (pollFailed) renderBoss(current)
+  }
 }, 100)
