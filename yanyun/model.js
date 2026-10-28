@@ -28,9 +28,10 @@
     const duration = Number.isFinite(stop) ? Math.max(0, (stop - start) / 1000) : null
     const estimated = t.basis !== 'server-battle-state'
     return { duration, estimated, state: advancing ? 'active' : t.phase === 'active' ? 'paused' : t.phase,
-      label: t.phase === 'ended' ? '已结束 · 待结算' : t.phase === 'interrupted' ? '计时中断' :
+      label: t.phase === 'ended' ? t.endReason === 'server-dungeon-finish' ? '已胜利 · 待校准' : '已结束 · 待结算' : t.phase === 'interrupted' ? '计时中断' :
         advancing ? estimated ? '估算计时' : '战斗计时' : '计时已暂停',
       detail: (estimated ? '依据服务器累计值的重置或首次变化估算开战时间。' : '依据收到的服务器开战状态计时。') +
+        (t.endReason === 'server-dungeon-finish' ? '已按服务器副本完成通知停表；' : '') +
         '收到结算后自动校准时长和每秒统计。' }
   }
   function ranked(rows, field) {

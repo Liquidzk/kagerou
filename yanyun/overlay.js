@@ -66,7 +66,8 @@ async function poll() {
   } catch { pollFailed = true; $('status').textContent = '连接中断 · 保留末次记录'; $('dot').classList.remove('active') }
   finally { busy = false }
 }
-poll(); setInterval(poll, 1000)
+// This reads only our local engine. No new requests are sent to the game.
+poll(); setInterval(poll, 250)
 // Smooth local display; this does not increase requests to the game or engine.
 setInterval(() => {
   if (source === 'live' && lastLiveData) renderTime(model.live(lastLiveData, !pollFailed && lastLiveData.control?.running))
