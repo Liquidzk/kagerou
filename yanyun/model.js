@@ -4,6 +4,13 @@
 ;(function (root) {
   const finite = v => typeof v === 'number' && Number.isFinite(v)
   const number = value => finite(value) ? value.toLocaleString('zh-CN', { maximumFractionDigits: 1 }) : '—'
+  function bossAmount(row, mode = 'percent', unit = 'raw') {
+    if (!row.available || !finite(row.currentHp) || !finite(row.maxHp) || row.maxHp <= 0) return '等待血量快照'
+    if (mode !== 'value') return (Math.max(0, Math.min(1, row.currentHp / row.maxHp)) * 100).toFixed(1) + '%'
+    const scale = unit === 'wan' ? 10000 : 1
+    const fmt = value => (value / scale).toLocaleString('zh-CN', { maximumFractionDigits: unit === 'wan' ? 2 : 1 })
+    return fmt(row.currentHp) + ' / ' + fmt(row.maxHp) + (unit === 'wan' ? ' 万' : '')
+  }
   const formatTime = seconds => {
     if (!finite(seconds) || seconds < 0) return '—'
     const tenths = Math.floor(seconds * 10 + 1e-7)
@@ -85,7 +92,7 @@
     constructor() { this.current = null; this.entries = new Map() }
     push(value) { if (this.current?.key && this.current.key !== value.key) this.entries.set(this.current.key, this.current); this.current = value; if (this.entries.size > 50) this.entries.delete(this.entries.keys().next().value) }
   }
-  const api = { finite, number, formatTime, ranked, live, review, History, bossView }
+  const api = { finite, number, bossAmount, formatTime, ranked, live, review, History, bossView }
   if (typeof module !== 'undefined') module.exports = api
   else root.YanyunModel = api
 })(typeof window === 'undefined' ? globalThis : window)

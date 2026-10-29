@@ -11,18 +11,37 @@ function style() {
   const opacity = Math.max(25, Math.min(100, Number(preferences.opacity) || 92)), font = Math.max(11, Math.min(21, Number(preferences.font) || 14))
   document.documentElement.style.setProperty('--opacity', opacity / 100); document.documentElement.style.setProperty('--font', font + 'px')
   $('opacity').value = opacity; $('font').value = font
+  $('hp-mode').value = preferences.hpMode === 'value' ? 'value' : 'percent'
+  $('hp-unit').value = preferences.hpUnit === 'wan' ? 'wan' : 'raw'
+  $('hp-unit-row').hidden = $('hp-mode').value !== 'value'
 }
 style()
 for (const field of ['opacity', 'font']) $(field).oninput = () => { preferences[field] = Number($(field).value); localStorage.setItem('yanyun-overlay-v2', JSON.stringify(preferences)); style() }
-$('reset').onclick = () => { preferences = {}; localStorage.setItem('yanyun-overlay-v2', '{}'); style() }
+for (const [id, field] of [['hp-mode','hpMode'],['hp-unit','hpUnit']]) $(id).onchange = () => {
+  preferences[field] = $(id).value; localStorage.setItem('yanyun-overlay-v2', JSON.stringify(preferences)); style(); render()
+}
+$('reset').onclick = () => { preferences = {}; localStorage.setItem('yanyun-overlay-v2', '{}'); style(); render() }
 $('settings').onclick = () => { $('preferences').hidden = !$('preferences').hidden }
 $('lock').onclick = () => desktop?.overlayCommand('lock')
 $('hide').onclick = () => desktop?.overlayCommand('hide')
 $('review').onclick = () => desktop?.overlayCommand('review')
-function state(s) { source = s.source || 'live'; lastLiveData = null; locked = !!s.locked; $('lock').textContent = locked ? '◆' : '◇'; poll() }
+function state(s) {
+  source = s.source || 'live'; lastLiveData = null; locked = !!s.locked; $('lock').textContent = locked ? '◆' : '◇'
+  if (typeof s.starShortcut === 'boolean') $('star-help').textContent = s.starShortcut ? 'Ctrl+Shift+F10：收藏最近结束的战斗（可在鼠标穿透时使用）' : 'Ctrl+Shift+F10 未能注册，可能被占用；仍可点击 ☆ 或在记录列表收藏。'
+  poll()
+}
 desktop?.overlayState().then(state)
 desktop?.onOverlayState(state)
 desktop?.onOverlaySettings(() => { $('preferences').hidden = false })
+let starToastTimer
+function starResult(result) {
+  if (!result) return
+  $('star-feedback').textContent = result.ok ? (result.changed ? '★ 已收藏最近结束的战斗' : '★ 这场战斗已收藏') + (result.endedAt ? ' · ' + new Date(result.endedAt).toLocaleTimeString('zh-CN',{hour12:false}) : '') : result.error || '收藏失败'
+  $('star-feedback').hidden = false; clearTimeout(starToastTimer)
+  starToastTimer = setTimeout(() => { $('star-feedback').hidden = true }, 6500)
+}
+$('star-last').onclick = () => desktop?.starLatest?.().catch(e => starResult({error:e.message}))
+desktop?.onStarResult?.(starResult)
 document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => { tab = button.dataset.tab; document.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('active', b === button)); render() } })
 function render() {
   if (!value) return
@@ -65,13 +84,11 @@ function renderBoss(view) {
     bar.className = 'boss-bar'; bar.dataset.role = row.role || 'boss'; bar.dataset.available = row.available
     fill.className = 'boss-fill'; fill.style.width = (row.percent ?? 0) + '%'
     name.className = 'boss-name'; name.textContent = bossName(row)
-    number.className = 'boss-number'; number.textContent = row.available ? row.percent.toFixed(1) + '%' : '等待血量快照'
+    number.className = 'boss-number'; number.textContent = model.bossAmount(row, preferences.hpMode, preferences.hpUnit)
     bar.title = row.available ? name.textContent + '：' + model.number(row.currentHp) + ' / ' + model.number(row.maxHp) + (hp.live ? '' : '（末次记录）') : name.textContent + '：尚未收到完整血量，不视为满血或零血'
-    const amount = document.createElement('span'); amount.className = 'boss-amount'
-    amount.textContent = row.available ? model.number(row.currentHp) + ' / ' + model.number(row.maxHp) : '—'
     bar.setAttribute('role', 'meter'); bar.setAttribute('aria-label', name.textContent); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100')
     if (row.available) bar.setAttribute('aria-valuenow', row.percent.toFixed(3))
-    bar.append(fill, name, amount, number); fragment.append(bar)
+    bar.append(fill, name, number); fragment.append(bar)
   }
   $('boss-bars').replaceChildren(fragment)
 }
